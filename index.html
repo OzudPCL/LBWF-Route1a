@@ -31,6 +31,7 @@
             margin-bottom: 8px;
             cursor: pointer;
             user-select: none;
+            transition: opacity 0.2s;
         }
 
         .legend-item.disabled { color: #ccc; opacity: 0.5; }
@@ -64,6 +65,7 @@
         <span style="background-color: #000000"></span>
         <label>Rerouted from James Lane</label>
     </div>
+    <p style="font-size: 10px; color: #999; margin-top: 10px; font-style: italic;">Click names to filter lines</p>
 </div>
 
 <script>
@@ -78,7 +80,6 @@
 
     map.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
-    // These must exactly match the keys in your properties
     let activeRoutes = [
         'Rerouted from Drayton Road', 
         'Rerouted from Hainault Road', 
@@ -86,7 +87,22 @@
     ];
 
     map.on('load', () => {
-        const layerID = 'polyline-lbwf_Route_1a_updated-6mx2re';
+        // Find the layer ID dynamically by searching for the keywords
+        const allLayers = map.getStyle().layers;
+        const targetLayer = allLayers.find(l => l.id.toLowerCase().includes('lbwf'));
+        
+        if (!targetLayer) {
+            console.error("Layer not found. Available layers:", allLayers.map(l => l.id));
+            return;
+        }
+        
+        const layerID = targetLayer.id;
+        console.log("Filtering target layer:", layerID);
+
+        // --- DEBUGGER: Click a line on the map to see its properties in the console ---
+        map.on('click', layerID, (e) => {
+            console.log("Clicked Feature Properties:", e.features[0].properties);
+        });
 
         document.querySelectorAll('.legend-item').forEach(item => {
             item.addEventListener('click', () => {
@@ -101,17 +117,17 @@
                     item.classList.remove('disabled');
                 }
 
-                // Updated Filter Logic
-                // This builds an 'any' filter that checks if the feature has 
-                // ANY of the active keys.
+                // Filtering logic
+                // We check for both property KEYS (has) and property VALUES (name/Layer)
                 const newFilter = ['any'];
                 activeRoutes.forEach(route => {
-                    newFilter.push(['has', route]);
+                    newFilter.push(['has', route]); // Matches your specific GeoJSON structure
+                    newFilter.push(['==', ['get', 'name'], route]); // Common fallback
+                    newFilter.push(['==', ['get', 'Layer'], route]); // Common fallback
                 });
 
-                // Apply the filter to the layer
                 if (activeRoutes.length === 0) {
-                    // Hide everything if nothing is selected
+                    // Hide everything if no buttons are active
                     map.setFilter(layerID, ['==', ['get', 'non-existent'], 'true']);
                 } else {
                     map.setFilter(layerID, newFilter);
