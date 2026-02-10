@@ -20,15 +20,21 @@
             padding: 15px;
             position: absolute;
             z-index: 10;
-            width: 220px;
+            width: 230px;
         }
 
-        .legend h4 { margin: 0 0 10px; font-size: 14px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+        .legend h4 { margin: 0 0 0px; font-size: 14px; border-bottom: 1px solid #ddd;}
         
+        .legend small {
+            font-style: italic;
+            display: block;
+            margin-bottom: 1px;
+        }
+
         .legend-item {
             display: flex;
             align-items: center;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
             cursor: pointer;
             user-select: none;
         }
@@ -39,11 +45,20 @@
             border-radius: 2px;
             display: inline-block;
             height: 4px;
-            width: 20px;
+            width: 18px;
             margin-right: 10px;
         }
 
         .mapboxgl-ctrl-top-right { top: 180px !important; }
+
+        .wf-logo {
+            position: absolute;
+            bottom: 40px;
+            left: 10px;
+            width: 80px; 
+            opacity: 0.85;
+            z-index: 10;
+        }
     </style>
 </head>
 <body>
@@ -52,6 +67,7 @@
 
 <div id="state-legend" class="legend">
     <h4>Rerouted Traffic</h4>
+    <small>click to toggle each filter</small>
     <div class="legend-item" data-route="Rerouted from Drayton Road">
         <span style="background-color: #1aa607"></span>
         <label>Rerouted from Drayton Road</label>
@@ -66,6 +82,9 @@
     </div>
 </div>
 
+<!-- Waltham Forest logo -->
+<img class="wf-logo" src="https://londonroadsafety.org.uk/wp-content/uploads/2016/03/Lb_waltham_forest_logo.png" alt="Waltham Forest logo">
+
 <script>
     mapboxgl.accessToken = 'pk.eyJ1IjoicHJvamVjdGNlbnRyZSIsImEiOiJja3o4OW9zYmowM3YwMm9tcWF0MTRtc3VyIn0.ns_jCyc8s6t6CS1w8SK6QQ';
     
@@ -78,7 +97,6 @@
 
     map.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
-    // These must exactly match the keys in your properties
     let activeRoutes = [
         'Rerouted from Drayton Road', 
         'Rerouted from Hainault Road', 
@@ -101,17 +119,12 @@
                     item.classList.remove('disabled');
                 }
 
-                // Updated Filter Logic
-                // This builds an 'any' filter that checks if the feature has 
-                // ANY of the active keys.
                 const newFilter = ['any'];
                 activeRoutes.forEach(route => {
                     newFilter.push(['has', route]);
                 });
 
-                // Apply the filter to the layer
                 if (activeRoutes.length === 0) {
-                    // Hide everything if nothing is selected
                     map.setFilter(layerID, ['==', ['get', 'non-existent'], 'true']);
                 } else {
                     map.setFilter(layerID, newFilter);
