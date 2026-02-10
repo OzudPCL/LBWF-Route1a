@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <title>LBWF route 1a</title>
+    
+
+  </head>
+    
+  <body>
+  <html>
+<head>
+    <meta charset="utf-8">
+    <title>Mapbox Map with Filterable Legend</title>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+
+        /* Legend Styling */
+        .legend {
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 4px;
+            top: 20px;
+            right: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
+            padding: 15px;
+            position: absolute;
+            z-index: 1;
+            width: 210px;
+        }
+
+        .legend h4 { 
+            margin: 0 0 10px; 
+            font-size: 14px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+
+        .legend-item:hover {
+            background-color: #f0f0f0;
+        }
+
+        /* Style for when a route is hidden */
+        .legend-item.disabled {
+            color: #ccc;
+            opacity: 0.5;
+        }
+        
+        .legend-item span {
+            border-radius: 2px;
+            display: inline-block;
+            height: 4px;
+            width: 20px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        .instruction {
+            display: block;
+            margin-top: 10px;
+            color: #888;
+            font-size: 10px;
+            font-style: italic;
+        }
+
+        /* Adjusted navigation control position to not overlap legend */
+        .mapboxgl-ctrl-top-right {
+            top: 180px !important;
+        }
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div id="state-legend" class="legend">
+    <h4>Rerouted Traffic</h4>
+    <div class="legend-item" data-route="Rerouted from Drayton Road">
+        <span style="background-color: #1aa607"></span>
+        <label>Rerouted from Drayton Road</label>
+    </div>
+    <div class="legend-item" data-route="Rerouted from Hainault Road">
+        <span style="background-color: #cab302"></span>
+        <label>Rerouted from Hainault Road</label>
+    </div>
+    <div class="legend-item" data-route="Rerouted from James Lane">
+        <span style="background-color: #000000"></span>
+        <label>Rerouted from James Lane</label>
+    </div>
+    <span class="instruction">Click a route to toggle visibility</span>
+</div>
+
+<script>
+    mapboxgl.accessToken = 'pk.eyJ1IjoicHJvamVjdGNlbnRyZSIsImEiOiJja3o4OW9zYmowM3YwMm9tcWF0MTRtc3VyIn0.ns_jCyc8s6t6CS1w8SK6QQ';
+    
+    const map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/projectcentre/cml0p93w0002w01qs42k81210',
+        center: [0.00500, 51.57241],
+        zoom: 13.90,
+        scrollZoom: true
+    });
+
+    map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+
+    // Initial state: all routes are visible
+    let activeRoutes = [
+        'Rerouted from Drayton Road', 
+        'Rerouted from Hainault Road', 
+        'Rerouted from James Lane'
+    ];
+
+    map.on('load', () => {
+        // The ID of the layer you want to filter
+        const layerID = 'polyline-LBWF_Route_1a_updated-6mx2re';
+
+        // Add event listeners to legend items
+        document.querySelectorAll('.legend-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const routeKey = item.getAttribute('data-route');
+                const index = activeRoutes.indexOf(routeKey);
+
+                if (index > -1) {
+                    // Route is currently active, so disable it
+                    activeRoutes.splice(index, 1);
+                    item.classList.add('disabled');
+                } else {
+                    // Route is currently disabled, so activate it
+                    activeRoutes.push(routeKey);
+                    item.classList.remove('disabled');
+                }
+
+                // Construct the "OR" filter
+                // This checks if the feature HAS any of the keys in activeRoutes
+                let filter = ['any'];
+                activeRoutes.forEach(key => {
+                    filter.push(['has', key]);
+                });
+
+                // Apply filter. If nothing is selected, we use a filter that returns false.
+                if (activeRoutes.length === 0) {
+                    map.setFilter(layerID, ['==', ['get', 'non-existent'], 'true']);
+                } else {
+                    map.setFilter(layerID, filter);
+                }
+            });
+        });
+    });
+</script>
+
+</body>
+</html>
+    
+  </body>
+  
+</html>
