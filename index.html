@@ -7,7 +7,7 @@
     <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
     <style>
-        body { margin: 0; padding: 0; }
+        body { margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, Helvetica, sans-serif; }
         #map { position: absolute; top: 0; bottom: 0; width: 100%; }
 
         .legend {
@@ -21,20 +21,28 @@
             position: absolute;
             z-index: 10;
             width: 230px;
+            display: flex;
+            flex-direction: column;
         }
 
-        .legend h4 { margin: 0 0 0px; font-size: 14px; border-bottom: 1px solid #ddd;}
+        .legend h4 { 
+            margin: 0 0 5px; 
+            font-size: 14px; 
+            border-bottom: 2px solid #00997C; 
+            padding-bottom: 5px;
+            color: #00997C;
+        }
         
         .legend small {
             font-style: italic;
             display: block;
-            margin-bottom: 1px;
+            margin-bottom: 8px;
         }
 
         .legend-item {
             display: flex;
             align-items: center;
-            margin-bottom: 4px;
+            margin-bottom: 6px;
             cursor: pointer;
             user-select: none;
         }
@@ -49,7 +57,85 @@
             margin-right: 10px;
         }
 
-        .mapboxgl-ctrl-top-right { top: 180px !important; }
+        /* Data Table Button Styling */
+        .table-toggle-btn {
+            width: 100%;
+            margin-top: 10px;
+            padding: 8px;
+            background-color: #00997C;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .table-toggle-btn:hover {
+            background-color: #007a63;
+        }
+
+        /* Inline Table Container */
+        #table-wrapper {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+            background: white;
+            border-radius: 0 0 4px 4px;
+        }
+
+        #table-wrapper.expanded {
+            max-height: 350px; 
+            margin-top: 10px;
+            border-top: 1px solid #ddd;
+        }
+
+        .scrollable-table {
+            overflow-y: auto;
+            max-height: 340px; 
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 11px;
+        }
+
+        th {
+            background-color: #f4f4f4;
+            color: #00997C;
+            padding: 8px 4px;
+            position: sticky;
+            top: 0;
+            border-bottom: 2px solid #00997C;
+            z-index: 2;
+        }
+
+        td {
+            padding: 6px 4px;
+            border-bottom: 1px solid #eee;
+        }
+
+        /* Sticky Footer for Totals */
+        tfoot tr {
+            position: sticky;
+            bottom: 0;
+            background-color: #f4f4f4;
+            font-weight: bold;
+            color: #00997C;
+            border-top: 2px solid #00997C;
+            z-index: 2;
+        }
+
+        tr:hover {
+            background-color: #f0faf8;
+        }
+
+        .mapboxgl-ctrl-top-right { top: 20px !important; right: 260px !important; }
 
         .wf-logo {
             position: absolute;
@@ -80,9 +166,46 @@
         <span style="background-color: #000000"></span>
         <label>Rerouted from James Lane</label>
     </div>
+    <div class="legend-item" data-route="Rerouted from Fletcher Lane">
+        <span style="background-color: #7901ad"></span>
+        <label>Rerouted from Fletcher Lane</label>
+    </div>
+    <div class="legend-item" data-route="Rerouted from Fairlop Road">
+        <span style="background-color: #00b0e6"></span>
+        <label>Rerouted from Fairlop Road</label>
+    </div>
+    
+    <button class="table-toggle-btn" id="toggle-table">
+        <span>View Data Table</span>
+        <span id="arrow">▼</span>
+    </button>
+
+    <!-- Inline Scrollable Table -->
+    <div id="table-wrapper">
+        <div class="scrollable-table">
+            <table id="data-table">
+                <thead>
+                    <tr>
+                        <th>Site ID</th>
+                        <th>Link Counts</th>
+                        <th>Additional Traffic</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    <!-- Data populated by JS -->
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td>TOTAL</td>
+                        <td id="total-links">0</td>
+                        <td id="total-traffic">0</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
 </div>
 
-<!-- Waltham Forest logo -->
 <img class="wf-logo" src="https://londonroadsafety.org.uk/wp-content/uploads/2016/03/Lb_waltham_forest_logo.png" alt="Waltham Forest logo">
 
 <script>
@@ -97,14 +220,91 @@
 
     map.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
+    const rawTrafficData = [
+        { id: "1", links: 1227, traffic: 0 }, { id: "2", links: 1511, traffic: 0 }, { id: "3", links: 736, traffic: 0 },
+        { id: "4", links: 1055, traffic: 0 }, { id: "5", links: 538, traffic: 0 }, { id: "6", links: 717, traffic: 0 },
+        { id: "7", links: 900, traffic: 1792 }, { id: "8", links: 422, traffic: 673 }, { id: "9", links: 555, traffic: 0 },
+        { id: "10", links: 684, traffic: 0 }, { id: "11", links: 131, traffic: 0 }, { id: "12", links: 414, traffic: 0 },
+        { id: "13", links: 1370, traffic: 0 }, { id: "14", links: 0, traffic: 0 }, { id: "15", links: 2915, traffic: 0 },
+        { id: "16", links: 2123, traffic: 0 }, { id: "17", links: 0, traffic: 0 }, { id: "18", links: 8292, traffic: 116 },
+        { id: "19", links: 6027, traffic: 0 }, { id: "20", links: 0, traffic: 0 }, { id: "21", links: 1446, traffic: 541 },
+        { id: "22", links: 1904, traffic: 989 }, { id: "23", links: 4314, traffic: 0 }, { id: "24", links: 4144, traffic: 0 },
+        { id: "25", links: 1365, traffic: 994 }, { id: "26", links: 1259, traffic: 554 }, { id: "27", links: 493, traffic: 0 },
+        { id: "28", links: 95, traffic: 0 }, { id: "29", links: 703, traffic: 0 }, { id: "30", links: 1025, traffic: 0 },
+        { id: "31", links: 2777, traffic: 0 }, { id: "32", links: 2337, traffic: 0 }, { id: "33", links: 1755, traffic: 0 },
+        { id: "34", links: 1373, traffic: 0 }, { id: "35", links: 1441, traffic: 0 }, 
+        { id: "36", links: 2031, traffic: 0 }, 
+        { id: "37", links: 695, traffic: 0 },  
+        { id: "38", links: 284, traffic: 0 },  
+        { id: "39", links: 4228, traffic: 0 }, 
+        { id: "40", links: 3530, traffic: 0 }, 
+        { id: "41", links: 764, traffic: 0 },  // Updated from 768 to 764
+        { id: "42", links: 595, traffic: 0 },  
+        { id: "43", links: 963, traffic: 0 },  
+        { id: "44", links: 656, traffic: 0 },  
+        { id: "45", links: 98, traffic: 0 },   
+        { id: "46", links: 0, traffic: 0 },    
+        { id: "47", links: 1775, traffic: 0 }, 
+        { id: "48", links: 2089, traffic: 0 }, 
+        { id: "49", links: 2581, traffic: 1586 }, 
+        { id: "50", links: 1734, traffic: 673 }, 
+        { id: "51", links: 470, traffic: 0 },  
+        { id: "52", links: 723, traffic: 0 },  
+        { id: "53", links: 0, traffic: 593 }, 
+        { id: "54", links: 0, traffic: 507 },
+        { id: "55", links: 0, traffic: 593 }, 
+        { id: "56", links: 0, traffic: 507 }, 
+        { id: "57", links: 0, traffic: 0 },
+        { id: "58", links: 0, traffic: 165 }, 
+        { id: "59", links: 0, traffic: 537 }, 
+        { id: "60", links: 0, traffic: 740 },
+        { id: "61", links: 0, traffic: 685 }, 
+        { id: "62", links: 0, traffic: 280 }, 
+        { id: "63", links: 0, traffic: 274 },
+        { id: "64", links: 0, traffic: 305 }, 
+        { id: "65", links: 0, traffic: 274 }, 
+        { id: "66", links: 0, traffic: 305 },
+        { id: "67", links: 0, traffic: 372 }
+    ];
+
+    const sortedTrafficData = [...rawTrafficData].sort((a, b) => parseInt(a.id) - parseInt(b.id));
+
+    const tableBody = document.getElementById('table-body');
+    let totalLinks = 0;
+    let totalTraffic = 0;
+
+    sortedTrafficData.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${row.id}</td><td>${row.links}</td><td>${row.traffic}</td>`;
+        tableBody.appendChild(tr);
+        totalLinks += row.links;
+        totalTraffic += row.traffic;
+    });
+
+    document.getElementById('total-links').textContent = totalLinks.toLocaleString();
+    document.getElementById('total-traffic').textContent = totalTraffic.toLocaleString();
+
+    const toggleBtn = document.getElementById('toggle-table');
+    const tableWrapper = document.getElementById('table-wrapper');
+    const arrow = document.getElementById('arrow');
+
+    toggleBtn.addEventListener('click', () => {
+        const isExpanded = tableWrapper.classList.toggle('expanded');
+        arrow.textContent = isExpanded ? '▲' : '▼';
+    });
+
+    // Track state for both layers
     let activeRoutes = [
         'Rerouted from Drayton Road', 
         'Rerouted from Hainault Road', 
-        'Rerouted from James Lane'
+        'Rerouted from James Lane',
+        'Rerouted from Fletcher Lane',
+        'Rerouted from Fairlop Road'
     ];
 
     map.on('load', () => {
-        const layerID = 'lbwf_Route_1a_updated-6mx2re';
+        const layer1 = 'lbwf_Route_1a_updated-6mx2re';
+        const layer2 = 'additional-1a-routes-apt653';
 
         document.querySelectorAll('.legend-item').forEach(item => {
             item.addEventListener('click', () => {
@@ -119,16 +319,18 @@
                     item.classList.remove('disabled');
                 }
 
+                // Update filters for both layers
                 const newFilter = ['any'];
                 activeRoutes.forEach(route => {
                     newFilter.push(['has', route]);
                 });
 
-                if (activeRoutes.length === 0) {
-                    map.setFilter(layerID, ['==', ['get', 'non-existent'], 'true']);
-                } else {
-                    map.setFilter(layerID, newFilter);
-                }
+                const finalFilter = activeRoutes.length === 0 
+                    ? ['==', ['get', 'non-existent'], 'true'] 
+                    : newFilter;
+
+                map.setFilter(layer1, finalFilter);
+                map.setFilter(layer2, finalFilter);
             });
         });
     });
